@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import os
+from scipy import stats
 from sklearn.linear_model import LinearRegression, Lasso, Ridge, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.neural_network import MLPRegressor
@@ -492,10 +493,17 @@ elif page == "Modèles et Prédictions":
     temperature_predictions = model_final.predict(X_projection)
     projection_df['Predicted Temperature'] = temperature_predictions
 
-    # Calcul de l'intervalle de confiance (exemple ±0.5°C autour de la projection)
-    confidence_interval = 0.5
-    projection_df['Upper Bound'] = projection_df['Predicted Temperature'] + confidence_interval
-    projection_df['Lower Bound'] = projection_df['Predicted Temperature'] - confidence_interval
+    # Calcul de l'intervalle de confiance basé sur l'écart-type des prédictions
+    confidence_level = 0.95
+    z_score = stats.norm.ppf(1 - (1 - confidence_level) / 2)  # Score Z pour un intervalle de confiance de 95 %
+
+    # Calcul de l'écart-type des prédictions pour chaque année
+    std_dev = np.std(temperature_predictions)
+    margin_of_error = z_score * std_dev  # Marge d'erreur en fonction de l'écart-type
+
+    # Ajouter l'intervalle de confiance aux prédictions
+    projection_df['Upper Bound'] = projection_df['Predicted Temperature'] + margin_of_error
+    projection_df['Lower Bound'] = projection_df['Predicted Temperature'] - margin_of_error
 
     # Affichage du graphique des prédictions de température avec option d'inclusion des scénarios du GIEC
     show_giec_scenarios = st.checkbox("Afficher les scénarios du GIEC")
