@@ -168,11 +168,9 @@ elif page == "Exploration des Données":
 final_data_path = os.path.join("Data", "final_data.csv")
 
 # Page Visualisations
-if page == "Accueil":
-    pass  # Placeholder to ensure structural integrity
-elif page == "Visualisations":
-    # Charger le fichier final_data.csv
+if page == "Visualisations":
     try:
+        # Charger le fichier final_data.csv
         final_data = pd.read_csv(final_data_path)
 
         # Titre de la section
@@ -186,22 +184,31 @@ elif page == "Visualisations":
             """
         )
 
-        # Évolution des températures globales, hémisphère nord et sud (1880-2022)
-        st.markdown(
-            "### Évolution des Températures Globales, Hémisphère Nord et Sud (1880-2022)")
+        # Évolution des températures globales et des émissions de CO₂ (1880-2022)
+        st.markdown("### Évolution des Températures Globales, Hémisphère Nord et Sud et des Émissions de CO₂ (1880-2022)")
 
         fig_temp = go.Figure()
+
+        # Ajouter les courbes des températures
         fig_temp.add_trace(go.Scatter(
             x=final_data['Year'], y=final_data['Glob'], mode='lines', name='Global', line=dict(color="red")))
         fig_temp.add_trace(go.Scatter(
             x=final_data['Year'], y=final_data['NHem'], mode='lines', name='Northern Hemisphere', line=dict(color="blue")))
-        fig_temp.add_trace(go.Scatter(x=final_data['Year'], y=final_data['SHem'],
-                           mode='lines', name='Southern Hemisphere', line=dict(color="green")))
+        fig_temp.add_trace(go.Scatter(
+            x=final_data['Year'], y=final_data['SHem'], mode='lines', name='Southern Hemisphere', line=dict(color="green")))
+
+        # Ajouter la courbe des émissions de CO₂ sur un axe secondaire
+        fig_temp.add_trace(go.Scatter(
+            x=final_data['Year'], y=final_data['CO2 (kt)'], mode='lines', name='Émissions de CO₂ (kt)', line=dict(color="orange"), yaxis="y2"))
+
+        # Mise en forme du graphique
         fig_temp.update_layout(
-            title='Évolution des températures globales, hémisphère nord et sud (1880-2022)',
+            #title="Évolution des Températures Globales, Hémisphère Nord et Sud et des Émissions de CO₂ (1880-2022)",
             xaxis_title='Année',
             yaxis_title='Température (°C)',
+            yaxis2=dict(title="Émissions de CO₂ (kt)", overlaying='y', side='right')
         )
+
         st.plotly_chart(fig_temp, use_container_width=True)
 
         # Bouton pour afficher les commentaires
@@ -218,8 +225,7 @@ elif page == "Visualisations":
             )
 
         # Relation entre la population mondiale et les émissions de CO₂ (1880-2022)
-        st.markdown(
-            "### Relation entre la Population Mondiale et les Émissions de CO₂ (1880-2022)")
+        st.markdown("### Relation entre la Population Mondiale et les Émissions de CO₂ (1880-2022)")
 
         fig_pop_co2 = go.Figure()
 
@@ -240,9 +246,9 @@ elif page == "Visualisations":
             yaxis="y2"  # Utilisation d'un deuxième axe pour CO₂
         ))
 
-    # Mise en forme des axes
+        # Mise en forme des axes
         fig_pop_co2.update_layout(
-            title='Relation entre la Population Mondiale et les Émissions de CO₂ (1880-2022)',
+            #title='Relation entre la Population Mondiale et les Émissions de CO₂ (1880-2022)',
             xaxis=dict(title='Année'),
             yaxis=dict(title='Population (millions)',
                        titlefont=dict(color='purple')),
@@ -265,8 +271,7 @@ elif page == "Visualisations":
             )
 
         # Évolution du PIB mondial et des émissions de CO₂ (1880-2022)
-        st.markdown(
-            "### Évolution du PIB Mondial et des Émissions de CO₂ (1880-2022)")
+        st.markdown("### Évolution du PIB Mondial et des Émissions de CO₂ (1880-2022)")
 
         fig_pib_co2 = go.Figure()
         fig_pib_co2.add_trace(go.Scatter(
@@ -274,7 +279,7 @@ elif page == "Visualisations":
         fig_pib_co2.add_trace(go.Scatter(
             x=final_data['Year'], y=final_data['CO2 (kt)'], mode='lines', name='CO₂', line=dict(color="red"), yaxis="y2"))
         fig_pib_co2.update_layout(
-            title="Évolution du PIB mondial et des émissions de CO₂ (1880-2022)",
+            #title="Évolution du PIB mondial et des émissions de CO₂ (1880-2022)",
             xaxis=dict(title='Année'),
             yaxis=dict(title='PIB (milliards)', titlefont=dict(
                 color="green"), tickfont=dict(color="green")),
@@ -344,9 +349,15 @@ elif page == "Modèles et Prédictions":
         gdp_growth_rate_default = final_data['GDP (billions)'].pct_change().mean() * 100
         population_growth_rate_default = final_data['Population (millions)'].pct_change().mean() * 100
         co2_growth_rate_default = final_data['CO2 (kt)'].pct_change().mean() * 100
+
+        # Valeurs de référence pour l'année 2022 (dernière année des données)
+        gdp_2022 = final_data['GDP (billions)'].iloc[-1]
+        population_2022 = final_data['Population (millions)'].iloc[-1]
+        co2_2022 = final_data['CO2 (kt)'].iloc[-1]
     
     except FileNotFoundError:
         st.error("Le fichier final_data.csv est introuvable. Vérifiez le chemin et réessayez.")
+        st.stop()
     
     # Entraînement du modèle de régression linéaire final
     X = final_data[['Population (millions)', 'CO2 (kt)', 'GDP (billions)']]
@@ -416,7 +427,7 @@ elif page == "Modèles et Prédictions":
         3. **Robustesse et généralisation** : contrairement à certains modèles non linéaires qui peuvent surajuster, la régression linéaire reste simple et robuste.
         """)
 
-    # Définition des fonctions pour chaque scénario du GIEC
+    # Définition des fonctions pour chaque scénario du GIEC pour les courbes de température
     def scenario_curve(coeffs, x):
         return coeffs[0] * x**2 + coeffs[1] * x + coeffs[2]
 
@@ -434,49 +445,53 @@ elif page == "Modèles et Prédictions":
         "SSP5-8.5": lambda x: scenario_curve(coeffs_ssp5_8_5, x)
     }
 
-    # Section 2 : Prédictions
-    st.markdown("### Prédictions")
+    # Taux de croissance définis pour chaque scénario
+    scenario_growth_rates = {
+        "SSP1-1.9": {"GDP (billions)": -2.5, "Population (millions)": -0.13, "CO2 (kt)": -3.87},
+        "SSP2-4.5": {"GDP (billions)": -0.93, "Population (millions)": 0.04, "CO2 (kt)": -3.91},
+        "SSP3-7.0": {"GDP (billions)": 1.42, "Population (millions)": -0.09, "CO2 (kt)": -2.17},
+        "SSP4-6.0": {"GDP (billions)": 3.04, "Population (millions)": 1.22, "CO2 (kt)": 2.37},
+        "SSP5-8.5": {"GDP (billions)": 3.04, "Population (millions)": 2.4, "CO2 (kt)": 3.33},
+    }
 
-    # Boutons pour les options de réinitialisation et de corrélation
-    col1, col2 = st.columns(2)
-    with col1:
-        reset_to_historical = st.button("Taux historiques")
-    with col2:
-        correlate_variables = st.checkbox("Corréler les taux")
+    # Choix de l'option de taux de croissance par l'utilisateur
+    st.markdown("### Options de Taux de Croissance")
+    option = st.radio("Choisissez une option :", ["Taux historiques", "Corréler les taux", "Scénario du GIEC"])
 
-    # Réinitialisation des valeurs des curseurs aux valeurs par défaut si le bouton est cliqué
-    if reset_to_historical:
+    # Application des taux de croissance basés sur les scénarios ou options sélectionnés
+    if option == "Scénario du GIEC":
+        selected_scenario = st.selectbox("Sélectionnez un scénario du GIEC :", list(scenario_growth_rates.keys()))
+        selected_growth = scenario_growth_rates[selected_scenario]
+        gdp_growth_adjustment = selected_growth["GDP (billions)"]
+        population_growth_adjustment = selected_growth["Population (millions)"]
+        co2_growth_adjustment = selected_growth["CO2 (kt)"]
+
+    elif option == "Taux historiques":
         gdp_growth_adjustment = gdp_growth_rate_default
         population_growth_adjustment = population_growth_rate_default
         co2_growth_adjustment = co2_growth_rate_default
-    else:
-        # Calcul des ratios de proportionnalité
-        population_ratio = population_growth_rate_default / gdp_growth_rate_default
-        co2_ratio = co2_growth_rate_default / gdp_growth_rate_default
 
-        if correlate_variables:
-            # Curseur principal pour ajuster le taux de croissance du PIB
-            gdp_growth_adjustment = st.slider("Taux de croissance PIB (%)", -5.0, 5.0, gdp_growth_rate_default)
+    elif option == "Corréler les taux":
+        # Curseur de variation (%) global
+        variation_percent = st.slider("Variation (%)", -20.0, 20.0, 0.0, key="variation_slider")
 
-            # Calcul proportionnel pour les autres taux en gardant les ratios constants
-            population_growth_adjustment = gdp_growth_adjustment * population_ratio
-            co2_growth_adjustment = gdp_growth_adjustment * co2_ratio
+        # Ajuster proportionnellement les taux de croissance en fonction de la variation
+        gdp_growth_adjustment = gdp_growth_rate_default + (gdp_growth_rate_default * variation_percent / 100)
+        population_growth_adjustment = population_growth_rate_default + (population_growth_rate_default * variation_percent / 100)
+        co2_growth_adjustment = co2_growth_rate_default + (co2_growth_rate_default * variation_percent / 100)
 
-            # Affichage des curseurs désactivés avec les valeurs calculées
-            st.slider("Taux de croissance Population (%) (corrélé)", -5.0, 5.0, population_growth_adjustment, disabled=True)
-            st.slider("Taux de croissance CO₂ (%) (corrélé)", -5.0, 5.0, co2_growth_adjustment, disabled=True)
-        else:
-            # Curseurs indépendants pour chaque taux de croissance
-            gdp_growth_adjustment = st.slider("Taux de croissance PIB (%)", -5.0, 5.0, gdp_growth_rate_default)
-            population_growth_adjustment = st.slider("Taux de croissance Population (%)", -5.0, 5.0, population_growth_rate_default)
-            co2_growth_adjustment = st.slider("Taux de croissance CO₂ (%)", -5.0, 5.0, co2_growth_rate_default)
+    # Curseurs principaux pour ajustement manuel ou pour afficher les taux actuels
+    st.markdown("### Curseurs de Taux de Croissance")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        gdp_growth_adjustment = st.slider("Taux de croissance PIB (%)", -10.0, 10.0, gdp_growth_adjustment, key="gdp")
+    with col2:
+        population_growth_adjustment = st.slider("Taux de croissance Population (%)", -10.0, 10.0, population_growth_adjustment, key="population")
+    with col3:
+        co2_growth_adjustment = st.slider("Taux de croissance CO₂ (%)", -10.0, 10.0, co2_growth_adjustment, key="co2")
 
     # Calcul des projections des variables explicatives jusqu'en 2100 avec les taux ajustés
     years_projection = np.arange(2023, 2101)
-    gdp_2022 = final_data['GDP (billions)'].values[-1]
-    population_2022 = final_data['Population (millions)'].values[-1]
-    co2_2022 = final_data['CO2 (kt)'].values[-1]
-
     gdp_projection = [gdp_2022 * ((1 + gdp_growth_adjustment / 100) ** (year - 2022)) for year in years_projection]
     population_projection = [population_2022 * ((1 + population_growth_adjustment / 100) ** (year - 2022)) for year in years_projection]
     co2_projection = [co2_2022 * ((1 + co2_growth_adjustment / 100) ** (year - 2022)) for year in years_projection]
@@ -495,13 +510,9 @@ elif page == "Modèles et Prédictions":
 
     # Calcul de l'intervalle de confiance basé sur l'écart-type des prédictions
     confidence_level = 0.95
-    z_score = stats.norm.ppf(1 - (1 - confidence_level) / 2)  # Score Z pour un intervalle de confiance de 95 %
-
-    # Calcul de l'écart-type des prédictions pour chaque année
+    z_score = stats.norm.ppf(1 - (1 - confidence_level) / 2)
     std_dev = np.std(temperature_predictions)
-    margin_of_error = z_score * std_dev  # Marge d'erreur en fonction de l'écart-type
-
-    # Ajouter l'intervalle de confiance aux prédictions
+    margin_of_error = z_score * std_dev
     projection_df['Upper Bound'] = projection_df['Predicted Temperature'] + margin_of_error
     projection_df['Lower Bound'] = projection_df['Predicted Temperature'] - margin_of_error
 
@@ -584,7 +595,8 @@ elif page == "Modèles et Prédictions":
         yaxis3=dict(title='CO₂ (kt)', titlefont=dict(color='red'), tickfont=dict(color='red'),
                     anchor='free', overlaying='y', side='right', position=0.85),
         legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
-        width=700, height=500
+        width=700,
+        height=500
     )
 
     # Affichage des graphiques dans Streamlit
@@ -594,37 +606,6 @@ elif page == "Modèles et Prédictions":
     with col2:
         st.plotly_chart(fig_temperature, use_container_width=True)
         
-    # Valeurs cibles des variables pour chaque scénario en 2100
-    target_values_2100 = {
-        "SSP1-1.9": {"GDP (billions)": 90000, "Population (millions)": 10000, "CO2 (kt)": 10000},
-        "SSP1-2.6": {"GDP (billions)": 95000, "Population (millions)": 10500, "CO2 (kt)": 20000},
-        "SSP2-4.5": {"GDP (billions)": 100000, "Population (millions)": 11000, "CO2 (kt)": 30000},
-        "SSP3-7.0": {"GDP (billions)": 105000, "Population (millions)": 11500, "CO2 (kt)": 40000},
-        "SSP5-8.5": {"GDP (billions)": 110000, "Population (millions)": 12000, "CO2 (kt)": 50000},
-    }
-
-    # Initial values for the variables
-    initial_values = {
-        "GDP (billions)": gdp_2022,
-        "Population (millions)": population_2022,
-        "CO2 (kt)": co2_2022
-    }
-
-    # Calculation of theoretical growth rates
-    growth_rates = []
-    for scenario, targets in target_values_2100.items():
-        scenario_growth = {"Scénario": scenario}
-        for variable, target_value in targets.items():
-            initial_value = initial_values[variable]
-            years = 2100 - 2022
-            growth_rate = ((target_value / initial_value) ** (1 / years) - 1) * 100
-            scenario_growth[variable] = f"{growth_rate:.2f}%"
-        
-        growth_rates.append(scenario_growth)
-
-    # Create DataFrame for display
-    growth_df = pd.DataFrame(growth_rates)
-
-    # Display the growth rates table at the bottom of the "Modèles et Prédictions" page
-    st.markdown("### Taux de Croissance Théoriques pour Atteindre les Valeurs des Scénarios du GIEC en 2100")
-    st.dataframe(growth_df)
+    # Option : Affichage du tableau des valeurs théoriques à la fin de la section
+    # st.markdown("### Taux de Croissance Théoriques pour Atteindre les Valeurs des Scénarios du GIEC en 2100")
+    # st.dataframe(pd.DataFrame(scenario_growth_rates).T)
